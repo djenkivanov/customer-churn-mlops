@@ -20,8 +20,8 @@ processor.run(
     code="src/processing/ingest_validate.py",
     inputs=[
         ProcessingInput(
-            source=f"s3://djenk-churn/{env}/rawdata/",
-            destination="/opt/ml/processing/input/rawdata"
+            source=f"s3://djenk-churn/{env}/raw/",
+            destination="/opt/ml/processing/input/raw"
         )
     ],
     outputs=[
@@ -31,7 +31,7 @@ processor.run(
         )
     ],
     arguments=[
-        "--input_dir", "/opt/ml/processing/input/rawdata",
+        "--input_dir", "/opt/ml/processing/input/raw",
         "--output_dir", "/opt/ml/processing/output/processed"
     ]
 )
