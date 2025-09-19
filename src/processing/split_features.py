@@ -54,13 +54,11 @@ def get_args():
     parser.add_argument(
         "--input_dir",
         type=str,
-        # required=True,
         help="Path to input directory where telco-churn.parquet can be found"
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        # required=True,
         help="Path for output directory"
     )
     return parser.parse_args()

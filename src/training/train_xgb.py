@@ -39,9 +39,10 @@ def main():
         num_boost_round=args.num_round
     )
 
-    model_location = args.model_dir + '/xgboost-model'
-    pkl.dump(bst, open(model_location, 'wb'))
+    model_location = os.path.join(args.model_dir, 'model.json')
     logging.info(f'Stored trained model at {model_location}')
+    # pkl.dump(bst, open(model_location, 'wb'))
+    bst.save_model(model_location)
 
 
 def get_args():
