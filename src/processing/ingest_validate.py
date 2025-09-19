@@ -149,7 +149,7 @@ def get_args():
         "--output_dir",
         type=str,
         required=True,
-        help="Path to output directory"
+        help="Path for output directory"
         )
     return parser.parse_args()
 

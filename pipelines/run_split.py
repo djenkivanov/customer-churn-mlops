@@ -1,8 +1,6 @@
 from sagemaker.processing import ProcessingInput, ProcessingOutput
 from sagemaker.sklearn.processing import SKLearnProcessor
 import sagemaker
-# from sagemaker.workflow.parameters import ParameterString
-
 
 env = "dev"
 # env = ParameterString(name="Env", default_value="dev")
@@ -17,21 +15,21 @@ processor = SKLearnProcessor(
 )
 
 processor.run(
-    code="src/processing/ingest_validate.py",
+    code="src/processing/split_features.py",
     inputs=[
         ProcessingInput(
-            source=f"s3://djenk-churn/{env}/raw",
-            destination="/opt/ml/processing/input/raw"
+            source=f"s3://djenk-churn/{env}/processed",
+            destination="/opt/ml/processing/input/processed"
         )
     ],
     outputs=[
         ProcessingOutput(
-            source="/opt/ml/processing/output/processed",
-            destination=f"s3://djenk-churn/{env}/processed"
+            source="/opt/ml/processing/output/split-features",
+            destination=f"s3://djenk-churn/{env}/features"
         )
     ],
     arguments=[
-        "--input_dir", "/opt/ml/processing/input/raw",
-        "--output_dir", "/opt/ml/processing/output/processed"
+        "--input_dir", "/opt/ml/processing/input/processed",
+        "--output_dir", "/opt/ml/processing/output/split-features"
     ]
 )

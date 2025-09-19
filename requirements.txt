@@ -1,2 +1,5 @@
 pandas
 sagemaker
+pyarrow
+fastparquet
+scikit-learn
