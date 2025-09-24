@@ -1,4 +1,4 @@
-import tarfile
+import tarfile, boto3
 import json
 from pathlib import Path
 import xgboost as xgb
@@ -9,6 +9,8 @@ import argparse
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+env = 'dev'
 
 def main():
     args = get_args()
@@ -26,13 +28,32 @@ def main():
 
     test_path = Path(args.data_dir) / 'test.csv'
     df = pd.read_csv(test_path)
-    y = df.iloc[:, 0].values
-    X = df.iloc[:, 1:].values
+    y = df['Churn'].values
+    X = df.drop(columns=['Churn']).values
 
     dtest = xgb.DMatrix(X)
 
     prob = booster.predict(dtest)
     preds = (prob >= 0.5).astype(int)
+
+    val_path = Path(args.data_dir) / 'val.csv'
+    df_val = pd.read_csv(val_path)
+    X_val = df_val.drop(columns=['Churn']).values
+
+    dval = xgb.DMatrix(X_val)
+
+    prob_val = booster.predict(dval)
+    preds_val = (prob_val >= 0.5).astype(int)
+
+    df_val['prediction'] = preds_val
+    val_preds_csv = df_val.to_csv(index=False).encode('utf-8')
+
+    s3 = boto3.client("s3")
+
+    bucket = 'djenk-churn'
+    key = f'{env}/features/val_preds.csv'
+
+    s3.put_object(Bucket=bucket, Key=key, Body=val_preds_csv, ContentType="text/csv")
 
     metrics = {
         "roc_auc": float(roc_auc_score(y, prob)),
