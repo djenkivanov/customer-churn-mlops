@@ -1,4 +1,6 @@
-import sagemaker, boto3, json
+import sagemaker
+import boto3
+import json
 from sagemaker.workflow.steps import ProcessingStep, TrainingStep
 from sagemaker.workflow.parameters import ParameterString
 from sagemaker.model import Model
