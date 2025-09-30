@@ -1,35 +1,28 @@
-import sagemaker
-import boto3
-import json
-from sagemaker.workflow.steps import ProcessingStep, TrainingStep
-from sagemaker.workflow.parameters import ParameterString
-from sagemaker.model import Model
-from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
-from sagemaker.xgboost.estimator import XGBoost
-from sagemaker.inputs import TrainingInput
-from sagemaker.model_metrics import ModelMetrics, MetricsSource
-from sagemaker.workflow.step_collections import RegisterModel
-from sagemaker.workflow.pipeline import Pipeline
-from sagemaker.workflow.functions import Join
-from sagemaker.model import ModelPackage
-from sagemaker.predictor import Predictor
-from sagemaker.serializers import CSVSerializer
-from sagemaker.deserializers import JSONDeserializer
-from sagemaker.model_monitor import DefaultModelMonitor, BaseliningJob, DatasetFormat, ModelQualityMonitor, EndpointInput, CronExpressionGenerator
-import pandas as pd
-from datetime import datetime
-import uuid
-from botocore.exceptions import ClientError
 import logging
-from sagemaker.workflow.properties import PropertyFile
-from sagemaker.workflow.quality_check_step import QualityCheckStep, DataQualityCheckConfig, ModelQualityCheckConfig
+
+import sagemaker
+from sagemaker.inputs import TrainingInput
+from sagemaker.model import Model
+from sagemaker.model_metrics import MetricsSource, ModelMetrics
+from sagemaker.model_monitor import DatasetFormat
+from sagemaker.processing import ProcessingInput, ProcessingOutput, ScriptProcessor
 from sagemaker.workflow.check_job_config import CheckJobConfig
-from sagemaker.workflow.model_step import ModelStep
-from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo, ConditionLessThanOrEqualTo
-from sagemaker.workflow.functions import JsonGet
-
+from sagemaker.workflow.functions import Join, JsonGet
+from sagemaker.workflow.model_step import ModelStep
+from sagemaker.workflow.parameters import ParameterString
+from sagemaker.workflow.pipeline import Pipeline
+from sagemaker.workflow.pipeline_context import PipelineSession
+from sagemaker.workflow.properties import PropertyFile
+from sagemaker.workflow.quality_check_step import (
+    DataQualityCheckConfig,
+    ModelQualityCheckConfig,
+    QualityCheckStep,
+)
+from sagemaker.workflow.step_collections import RegisterModel
+from sagemaker.workflow.steps import ProcessingStep, TrainingStep
+from sagemaker.xgboost.estimator import XGBoost
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,8 +38,6 @@ raw    = ParameterString("RawInputS3Uri", default_value="s3://djenk-churn/dev/ra
 models_base = Join(on="", values=["s3://", bucket, "/", env, "/models"])
 telco_csv_uri = Join(on="", values=["s3://", bucket, "/", env, "/processed"])
 features_s3_uri = Join(on="", values=["s3://", bucket, "/", env, "/features"])
-# endpoint_capture_s3_uri = Join(on="", values=["s3://", bucket, "/", env, "/endpoint-capture"])
-# dq_baseline_s3_uri = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/dataquality/baseline"])
 
 processor = ScriptProcessor(
     image_uri=sagemaker.image_uris.retrieve("xgboost", region, version="1.0-1"),
@@ -318,8 +309,8 @@ step_create_model = ModelStep(
 pipeline =  Pipeline(
     name="ChurnPredictMLOpsPipeline",
     parameters=[env, bucket, raw],
-    steps=[step_ingest, step_split, step_train, step_eval, step_register, step_dq_baseline, step_mq_baseline,
-           step_dq_check, step_mq_check],
+    steps=[step_ingest, step_split, step_train, step_eval, step_register, step_dq_baseline,
+           step_mq_baseline, step_dq_check, step_mq_check],
     sagemaker_session=sess,
 )
 
