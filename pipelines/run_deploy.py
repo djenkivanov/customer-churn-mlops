@@ -23,6 +23,7 @@ def endpoint_exists(sm_client, name):
         return False
 
 env = 'dev'
+# env = ParameterString(name="Env", default_value="dev")
 endpoint_name = f'churn-xgb-{env}'
 
 REGION = "eu-north-1" 
@@ -70,8 +71,6 @@ result = predictor.predict(test_predict)
 
 print(f'Predicted probability of churn: {result}')
 
-
-
 train_csv = f"s3://djenk-churn/{env}/features/train.csv"
 baseline_output = f"s3://djenk-churn/{env}/monitoring/dataquality/baseline"
 
@@ -107,10 +106,6 @@ schedule_dq = data_quality.create_monitoring_schedule(
 )
 
 print("DataQuality schedule created.")
-
-
-
-
 
 model_quality = ModelQualityMonitor(
     role=role,
@@ -160,4 +155,3 @@ schedule_mq = model_quality.create_monitoring_schedule(
 )
 
 print("ModelQuality schedule created.")
-

@@ -6,6 +6,7 @@ from sagemaker.processing import ScriptProcessor
 
 
 env = 'dev'
+# env = ParameterString(name="Env", default_value="dev")
 
 role = sagemaker.get_execution_role()
 

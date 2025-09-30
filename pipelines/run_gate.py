@@ -3,6 +3,7 @@ from sagemaker.processing import ProcessingInput, ProcessingOutput
 from sagemaker.sklearn.processing import SKLearnProcessor
 
 env = 'dev'
+# env = ParameterString(name="Env", default_value="dev")
 
 role = sagemaker.get_execution_role()
 
@@ -22,6 +23,6 @@ processor.run(
         )
     ],
     arguments=[
-        "--metrics_dir", "/opt/ml/processing/input/metrics",
+        "--metrics_dir", "/opt/ml/processing/input/metrics"
     ]
 )

@@ -3,6 +3,7 @@ import pandas as pd
 import logging
 from pathlib import Path
 from sklearn.model_selection import train_test_split
+import xgboost as xgb
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -10,10 +11,9 @@ logger = logging.getLogger(__name__)
 def main():
     args = get_args()
 
-    telco_parquet = Path(args.input_dir)/"telco-churn.parquet"
+    telco_csv = Path(args.input_dir)/"telco-churn-ingested.csv"
 
-    df = pd.read_parquet(telco_parquet)
-    # df = pd.read_parquet("s3://djenk-churn/dev/processed/telco-churn.parquet")
+    df = pd.read_csv(telco_csv)
 
     splits = split_features(df)
     save_splits(splits, Path(args.output_dir))
@@ -38,15 +38,11 @@ def save_splits(splits, output_dir):
     (X_train, y_train), (X_val, y_val), (X_test, y_test) = splits
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    X_train.assign(Churn=y_train).to_parquet(output_dir / "train.parquet", index=False)
-    X_val.assign(Churn=y_val).to_parquet(output_dir / "val.parquet", index=False)
-    X_test.assign(Churn=y_test).to_parquet(output_dir / "test.parquet", index=False)
-
     pd.concat([y_train, X_train], axis=1).to_csv(output_dir / "train.csv", index=False)
     pd.concat([y_val, X_val], axis=1).to_csv(output_dir / "val.csv", index=False)
     pd.concat([y_test, X_test], axis=1).to_csv(output_dir / "test.csv", index=False)
 
-    logger.info(f"Train/val/test splits saved as .parquet and .csv in {output_dir}")
+    logger.info(f"Train/val/test splits saved as .csv in {output_dir}")
 
 
 def get_args():

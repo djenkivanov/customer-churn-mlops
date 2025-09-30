@@ -7,6 +7,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 env = 'dev'
+# env = ParameterString(name="Env", default_value="dev")
 
 role = sagemaker.get_execution_role()
 region = sagemaker.Session().boto_region_name

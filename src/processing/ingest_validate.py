@@ -1,7 +1,7 @@
 import argparse
 import pandas as pd
-import logging
 from pathlib import Path
+import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,18 +13,15 @@ def main():
 
     df = pd.read_csv(telco_churn)
 
+    print(df)
+
     validate(df)
     val_clean_df = clean(df)
 
     # fetch from local mounted in processing job
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    val_clean_df.to_parquet(Path(args.output_dir)/"telco-churn.parquet")
 
-    # hardcoded fetch for dev
-    # df = pd.read_csv("s3://djenk-churn/dev/raw/telco-churn.csv")
-
-    
-    # print(f'df AFTER ========== \n {val_clean_df}')
+    val_clean_df.to_csv(Path(args.output_dir)/"telco-churn-ingested.csv")
    
 
 def validate(df):

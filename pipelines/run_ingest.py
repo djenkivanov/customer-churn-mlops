@@ -5,7 +5,9 @@ import sagemaker
 
 
 env = "dev"
-# env = ParameterString(name="Env", default_value="dev")
+
+# csv_source_path = ParameterString(name="RawInputS3Uri", default_value=f"s3://djenk-churn/{env}/raw")
+csv_source_path = f"s3://djenk-churn/{env}/raw"
 
 role = sagemaker.get_execution_role()
 
@@ -20,7 +22,7 @@ processor.run(
     code="src/processing/ingest_validate.py",
     inputs=[
         ProcessingInput(
-            source=f"s3://djenk-churn/{env}/raw",
+            source=csv_source_path,
             destination="/opt/ml/processing/input/raw"
         )
     ],

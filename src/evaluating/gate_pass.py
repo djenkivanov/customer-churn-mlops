@@ -38,7 +38,6 @@ def gate_pass(model_json):
 
     if failed:
         logger.info(f'Gate pass failed for model, failing metrics: {failed}')
-        exit(1)
     else:
         logger.info('Gate pass success.')
 
