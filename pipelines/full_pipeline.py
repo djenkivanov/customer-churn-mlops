@@ -31,9 +31,9 @@ sess = PipelineSession()
 role = sagemaker.get_execution_role()
 region = sess.boto_region_name
 
-env    = ParameterString("Env", default_value="dev")
+env = ParameterString("Env", default_value="dev")
 bucket = ParameterString("Bucket", default_value="djenk-churn")
-raw    = ParameterString("RawInputS3Uri", default_value="s3://djenk-churn/dev/raw/")
+raw = ParameterString("RawInputS3Uri", default_value="s3://djenk-churn/dev/raw/")
 
 models_base = Join(on="", values=["s3://", bucket, "/", env, "/models"])
 telco_csv_uri = Join(on="", values=["s3://", bucket, "/", env, "/processed"])
@@ -52,23 +52,20 @@ step_ingest = ProcessingStep(
     name="Ingest",
     processor=processor,
     code="src/processing/ingest_validate.py",
-    inputs=[
-        ProcessingInput(
-            source=raw,
-            destination="/opt/ml/processing/input/raw"
-        )
-    ],
+    inputs=[ProcessingInput(source=raw, destination="/opt/ml/processing/input/raw")],
     outputs=[
         ProcessingOutput(
             output_name="ingested",
             source="/opt/ml/processing/output/processed",
-            destination=telco_csv_uri
+            destination=telco_csv_uri,
         )
     ],
     job_arguments=[
-        "--input_dir", "/opt/ml/processing/input/raw",
-        "--output_dir", "/opt/ml/processing/output/processed"
-    ]
+        "--input_dir",
+        "/opt/ml/processing/input/raw",
+        "--output_dir",
+        "/opt/ml/processing/output/processed",
+    ],
 )
 
 logger.info("Data ingest completed.")
@@ -80,20 +77,22 @@ step_split = ProcessingStep(
     inputs=[
         ProcessingInput(
             source=step_ingest.properties.ProcessingOutputConfig.Outputs["ingested"].S3Output.S3Uri,
-            destination="/opt/ml/processing/input/processed"
+            destination="/opt/ml/processing/input/processed",
         )
     ],
     outputs=[
         ProcessingOutput(
-                output_name="features",
-                source="/opt/ml/processing/output/features",
-                destination=features_s3_uri
-            )
+            output_name="features",
+            source="/opt/ml/processing/output/features",
+            destination=features_s3_uri,
+        )
     ],
     job_arguments=[
-        "--input_dir", "/opt/ml/processing/input/processed",
-        "--output_dir", "/opt/ml/processing/output/features"
-    ]
+        "--input_dir",
+        "/opt/ml/processing/input/processed",
+        "--output_dir",
+        "/opt/ml/processing/output/features",
+    ],
 )
 
 logger.info("Split features completed.")
@@ -127,8 +126,8 @@ step_train = TrainingStep(
     estimator=xgb,
     inputs={
         "train": TrainingInput(train_csv, content_type="text/csv"),
-        "validation": TrainingInput(val_csv, content_type="text/csv")
-    }
+        "validation": TrainingInput(val_csv, content_type="text/csv"),
+    },
 )
 
 logger.info("Model training completed.")
@@ -137,39 +136,32 @@ model_artifact = step_train.properties.ModelArtifacts.S3ModelArtifacts
 
 eval_s3_uri = Join(on="", values=["s3://", bucket, "/", env, "/models/evaluation"])
 
-prop_metrics = PropertyFile(
-    name="EvalMetrics",
-    output_name="evaluation",
-    path="model_metrics.json"
-)
+prop_metrics = PropertyFile(name="EvalMetrics", output_name="evaluation", path="model_metrics.json")
 
 step_eval = ProcessingStep(
     name="Evaluate",
     processor=processor,
     code="src/evaluating/evaluate.py",
     inputs=[
-        ProcessingInput(
-                source=model_artifact,
-                destination="/opt/ml/processing/input/model"
-            ),
-        ProcessingInput(
-                source=features_uri,
-                destination="/opt/ml/processing/input/data"
-            )
+        ProcessingInput(source=model_artifact, destination="/opt/ml/processing/input/model"),
+        ProcessingInput(source=features_uri, destination="/opt/ml/processing/input/data"),
     ],
     outputs=[
         ProcessingOutput(
-                output_name="evaluation",
-                source="/opt/ml/processing/output/evaluation",
-                destination=eval_s3_uri
-            )
+            output_name="evaluation",
+            source="/opt/ml/processing/output/evaluation",
+            destination=eval_s3_uri,
+        )
     ],
     job_arguments=[
-        "--model_dir", "/opt/ml/processing/input/model",
-        "--data_dir", "/opt/ml/processing/input/data",
-        "--output_dir", "/opt/ml/processing/output/evaluation"
+        "--model_dir",
+        "/opt/ml/processing/input/model",
+        "--data_dir",
+        "/opt/ml/processing/input/data",
+        "--output_dir",
+        "/opt/ml/processing/output/evaluation",
     ],
-    property_files=[prop_metrics]
+    property_files=[prop_metrics],
 )
 
 logger.info("Model evaluation completed.")
@@ -203,7 +195,7 @@ gate_indicator = ConditionStep(
 metrics = ModelMetrics(
     model_statistics=MetricsSource(
         s3_uri=Join(on="", values=[evaluation_uri, "/model_metrics.json"]),
-        content_type="application/json"
+        content_type="application/json",
     )
 )
 
@@ -248,7 +240,7 @@ step_dq_baseline = QualityCheckStep(
     check_job_config=check_job_cfg,
     quality_check_config=dq_cfg,
     skip_check=True,
-    register_new_baseline=True
+    register_new_baseline=True,
 )
 
 step_dq_check = QualityCheckStep(
@@ -258,7 +250,7 @@ step_dq_check = QualityCheckStep(
     skip_check=False,
     register_new_baseline=False,
     supplied_baseline_statistics=dq_stat,
-    supplied_baseline_constraints=dq_con
+    supplied_baseline_constraints=dq_con,
 )
 
 mq_s3 = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/modelquality/baseline/"])
@@ -280,7 +272,7 @@ step_mq_baseline = QualityCheckStep(
     check_job_config=check_job_cfg,
     quality_check_config=mq_cfg,
     skip_check=True,
-    register_new_baseline=True
+    register_new_baseline=True,
 )
 
 step_mq_check = QualityCheckStep(
@@ -290,7 +282,7 @@ step_mq_check = QualityCheckStep(
     skip_check=False,
     register_new_baseline=False,
     supplied_baseline_statistics=mq_stat,
-    supplied_baseline_constraints=mq_con
+    supplied_baseline_constraints=mq_con,
 )
 
 deploy_model = Model(
@@ -298,30 +290,38 @@ deploy_model = Model(
     model_data=model_artifact,
     role=role,
     sagemaker_session=sess,
-    name="something"
+    name="something",
 )
 
-step_create_model = ModelStep(
-    name="CreateInferenceModel",
-    step_args=deploy_model.create()
-)
+step_create_model = ModelStep(name="CreateInferenceModel", step_args=deploy_model.create())
 
-pipeline =  Pipeline(
+pipeline = Pipeline(
     name="ChurnPredictMLOpsPipeline",
     parameters=[env, bucket, raw],
-    steps=[step_ingest, step_split, step_train, step_eval, step_register, step_dq_baseline,
-           step_mq_baseline, step_dq_check, step_mq_check],
+    steps=[
+        step_ingest,
+        step_split,
+        step_train,
+        step_eval,
+        step_register,
+        step_dq_baseline,
+        step_mq_baseline,
+        step_dq_check,
+        step_mq_check,
+    ],
     sagemaker_session=sess,
 )
 
 if __name__ == "__main__":
     pipeline.upsert(role_arn=role)
 
-    execution = pipeline.start(parameters={
-        "Env": "dev",
-        "Bucket": "djenk-churn",
-        "RawInputS3Uri": "s3://djenk-churn/dev/raw/"
-    })
+    execution = pipeline.start(
+        parameters={
+            "Env": "dev",
+            "Bucket": "djenk-churn",
+            "RawInputS3Uri": "s3://djenk-churn/dev/raw/",
+        }
+    )
 
     execution.wait()
 
