@@ -20,6 +20,8 @@ from sagemaker.workflow.quality_check_step import (
     ModelQualityCheckConfig,
     QualityCheckStep,
 )
+from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput, LambdaOutputTypeEnum
+from sagemaker.lambda_helper import Lambda
 from sagemaker.workflow.step_collections import RegisterModel
 from sagemaker.workflow.steps import ProcessingStep, TrainingStep
 from sagemaker.xgboost.estimator import XGBoost
@@ -290,10 +292,31 @@ deploy_model = Model(
     model_data=model_artifact,
     role=role,
     sagemaker_session=sess,
-    name="something",
+    name="ChurnPrediction"
 )
 
-step_create_model = ModelStep(name="CreateInferenceModel", step_args=deploy_model.create())
+step_deploy_model = ModelStep(name="CreateChurnPredictionModel", step_args=deploy_model.create())
+
+endpoint_name = Join(on="", values=["churn-xgb-", env])
+
+deploy_lambda = Lambda(
+    function_arn="arn:aws:lambda:eu-north-1:230197689510:function:deployEndpoint"
+)
+
+step_deploy_endpoint = LambdaStep(
+    name="DeployOrUpdateEndpoint",
+    lambda_func=deploy_lambda,
+    inputs={
+        "EndpointName": endpoint_name,
+        "ModelName": step_deploy_model.properties.ModelName,
+        "InstanceType": "ml.m5.large"
+    },
+    outputs=[
+        LambdaOutput(output_name="EndpointName", output_type=LambdaOutputTypeEnum.String),
+        LambdaOutput(output_name="EndpointConfigName", output_type=LambdaOutputTypeEnum.String),
+        LambdaOutput(output_name="Action", output_type=LambdaOutputTypeEnum.String),
+    ],
+)
 
 pipeline = Pipeline(
     name="ChurnPredictMLOpsPipeline",
@@ -308,6 +331,8 @@ pipeline = Pipeline(
         step_mq_baseline,
         step_dq_check,
         step_mq_check,
+        step_deploy_model,
+        step_deploy_endpoint
     ],
     sagemaker_session=sess,
 )
