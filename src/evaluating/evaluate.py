@@ -59,9 +59,9 @@ def main():
         "roc_auc": float(roc_auc_score(y, prob)),
         "pr_auc": float(average_precision_score(y, prob)),
         "logloss": float(log_loss(y, prob, eps=1e-15)),
-        "f1_at_0.5": float(f1_score(y, preds)),
-        "precision_at_0.5": float(precision_score(y, preds)),
-        "recall_at_0.5": float(recall_score(y, preds)),
+        "f1": float(f1_score(y, preds)),
+        "precision": float(precision_score(y, preds)),
+        "recall": float(recall_score(y, preds)),
         "positive_rate": float(prob.mean()),
     }
     log.info(f"metrics: {metrics}")

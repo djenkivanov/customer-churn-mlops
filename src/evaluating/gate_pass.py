@@ -22,7 +22,7 @@ def gate_pass(model_json):
         "roc_auc": 0.79,
         "pr_auc": 0.5,
         "logloss": 0.56,
-        "f1_at_0.5": 0.5,
+        "f1": 0.5,
     }
 
     failed = {}

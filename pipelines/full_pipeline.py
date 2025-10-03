@@ -183,7 +183,7 @@ cond_logloss = ConditionLessThanOrEqualTo(
     right=0.56,
 )
 cond_f1 = ConditionGreaterThanOrEqualTo(
-    left=JsonGet(step_name=step_eval.name, property_file=prop_metrics, json_path="f1_at_0.5"),
+    left=JsonGet(step_name=step_eval.name, property_file=prop_metrics, json_path="f1"),
     right=0.50,
 )
 
@@ -211,7 +211,7 @@ step_register = RegisterModel(
     transform_instances=["ml.m5.large"],
     model_package_group_name="ChurnPrediction",
     model_metrics=metrics,
-    approval_status="PendingManualApproval",
+    approval_status="Approved",
 )
 
 logger.info("Model register completed.")

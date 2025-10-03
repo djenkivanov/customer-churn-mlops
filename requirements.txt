@@ -5,5 +5,3 @@ fastparquet
 scikit-learn
 ruff
 black
-pytest
-pytest-cov
