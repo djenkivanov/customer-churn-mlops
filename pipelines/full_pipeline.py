@@ -226,8 +226,9 @@ check_job_cfg = CheckJobConfig(
     max_runtime_in_seconds=3600,
 )
 
-dq_s3_baseline = Join(on="", values=["s3://", bucket, "/", env,
-                                     "/monitoring/dataquality/baseline/"])
+dq_s3_baseline = Join(
+    on="", values=["s3://", bucket, "/", env, "/monitoring/dataquality/baseline/"]
+)
 dq_s3_report = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/dataquality/reports/"])
 
 dq_cfg_baseline = DataQualityCheckConfig(
@@ -260,8 +261,9 @@ step_dq_check = QualityCheckStep(
     supplied_baseline_constraints=step_dq_baseline.properties.CalculatedBaselineConstraints,
 )
 
-mq_s3_baseline = Join(on="", values=["s3://", bucket, "/", env,
-                                     "/monitoring/modelquality/baseline/"])
+mq_s3_baseline = Join(
+    on="", values=["s3://", bucket, "/", env, "/monitoring/modelquality/baseline/"]
+)
 mq_s3_reports = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/modelquality/reports/"])
 
 mq_cfg_basline = ModelQualityCheckConfig(
@@ -305,7 +307,7 @@ deploy_model = Model(
     model_data=model_artifact,
     role=role,
     sagemaker_session=sess,
-    name="ChurnPrediction"
+    name="ChurnPrediction",
 )
 
 step_deploy_model = ModelStep(name="CreateChurnPredictionModel", step_args=deploy_model.create())
@@ -322,7 +324,7 @@ step_deploy_endpoint = LambdaStep(
     inputs={
         "EndpointName": endpoint_name,
         "ModelName": step_deploy_model.properties.ModelName,
-        "InstanceType": "ml.m5.large"
+        "InstanceType": "ml.m5.large",
     },
     outputs=[
         LambdaOutput(output_name="EndpointName", output_type=LambdaOutputTypeEnum.String),
@@ -345,7 +347,7 @@ pipeline = Pipeline(
         step_dq_check,
         step_mq_check,
         step_deploy_model,
-        step_deploy_endpoint
+        step_deploy_endpoint,
     ],
     sagemaker_session=sess,
 )
