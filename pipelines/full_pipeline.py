@@ -2,6 +2,7 @@ import logging
 
 import sagemaker
 from sagemaker.inputs import TrainingInput
+from sagemaker.lambda_helper import Lambda
 from sagemaker.model import Model
 from sagemaker.model_metrics import MetricsSource, ModelMetrics
 from sagemaker.model_monitor import DatasetFormat
@@ -10,6 +11,7 @@ from sagemaker.workflow.check_job_config import CheckJobConfig
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo, ConditionLessThanOrEqualTo
 from sagemaker.workflow.functions import Join, JsonGet
+from sagemaker.workflow.lambda_step import LambdaOutput, LambdaOutputTypeEnum, LambdaStep
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.parameters import ParameterString
 from sagemaker.workflow.pipeline import Pipeline
@@ -20,8 +22,6 @@ from sagemaker.workflow.quality_check_step import (
     ModelQualityCheckConfig,
     QualityCheckStep,
 )
-from sagemaker.workflow.lambda_step import LambdaStep, LambdaOutput, LambdaOutputTypeEnum
-from sagemaker.lambda_helper import Lambda
 from sagemaker.workflow.step_collections import RegisterModel
 from sagemaker.workflow.steps import ProcessingStep, TrainingStep
 from sagemaker.xgboost.estimator import XGBoost
@@ -121,7 +121,6 @@ xgb = XGBoost(
 features_uri = step_split.properties.ProcessingOutputConfig.Outputs["features"].S3Output.S3Uri
 train_csv = Join(on="", values=[features_uri, "/train.csv"])
 val_csv = Join(on="", values=[features_uri, "/val.csv"])
-val_preds_s3 = Join(on="", values=[features_s3_uri, "/val_preds.csv"])
 
 step_train = TrainingStep(
     name="Train",
@@ -169,6 +168,7 @@ step_eval = ProcessingStep(
 logger.info("Model evaluation completed.")
 
 evaluation_uri = step_eval.properties.ProcessingOutputConfig.Outputs["evaluation"].S3Output.S3Uri
+val_preds = Join(on="", values=[evaluation_uri, "/val_preds.csv"])
 
 cond_auc = ConditionGreaterThanOrEqualTo(
     left=JsonGet(step_name=step_eval.name, property_file=prop_metrics, json_path="roc_auc"),
@@ -226,21 +226,26 @@ check_job_cfg = CheckJobConfig(
     max_runtime_in_seconds=3600,
 )
 
-dq_s3 = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/dataquality/baseline/"])
+dq_s3_baseline = Join(on="", values=["s3://", bucket, "/", env,
+                                     "/monitoring/dataquality/baseline/"])
+dq_s3_report = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/dataquality/reports/"])
 
-dq_cfg = DataQualityCheckConfig(
+dq_cfg_baseline = DataQualityCheckConfig(
     baseline_dataset=train_csv,
     dataset_format=DatasetFormat.csv(header=True),
-    output_s3_uri=dq_s3,
+    output_s3_uri=dq_s3_baseline,
 )
 
-dq_con = Join(on="", values=[dq_s3, "constraints.json"])
-dq_stat = Join(on="", values=[dq_s3, "statistics.json"])
+dq_cfg_check = DataQualityCheckConfig(
+    baseline_dataset=train_csv,
+    dataset_format=DatasetFormat.csv(header=True),
+    output_s3_uri=dq_s3_report,
+)
 
 step_dq_baseline = QualityCheckStep(
     name="DataQualityBaseline",
     check_job_config=check_job_cfg,
-    quality_check_config=dq_cfg,
+    quality_check_config=dq_cfg_baseline,
     skip_check=True,
     register_new_baseline=True,
 )
@@ -248,31 +253,39 @@ step_dq_baseline = QualityCheckStep(
 step_dq_check = QualityCheckStep(
     name="DataQualityCheck",
     check_job_config=check_job_cfg,
-    quality_check_config=dq_cfg,
+    quality_check_config=dq_cfg_check,
     skip_check=False,
     register_new_baseline=False,
-    supplied_baseline_statistics=dq_stat,
-    supplied_baseline_constraints=dq_con,
+    supplied_baseline_statistics=step_dq_baseline.properties.CalculatedBaselineStatistics,
+    supplied_baseline_constraints=step_dq_baseline.properties.CalculatedBaselineConstraints,
 )
 
-mq_s3 = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/modelquality/baseline/"])
+mq_s3_baseline = Join(on="", values=["s3://", bucket, "/", env,
+                                     "/monitoring/modelquality/baseline/"])
+mq_s3_reports = Join(on="", values=["s3://", bucket, "/", env, "/monitoring/modelquality/reports/"])
 
-mq_cfg = ModelQualityCheckConfig(
+mq_cfg_basline = ModelQualityCheckConfig(
     problem_type="BinaryClassification",
-    baseline_dataset=val_preds_s3,
+    baseline_dataset=val_preds,
     dataset_format=DatasetFormat.csv(header=True),
     inference_attribute="prediction",
     ground_truth_attribute="Churn",
-    output_s3_uri=mq_s3,
+    output_s3_uri=mq_s3_baseline,
 )
 
-mq_con = Join(on="", values=[mq_s3, "constraints.json"])
-mq_stat = Join(on="", values=[mq_s3, "statistics.json"])
+mq_cfg_reports = ModelQualityCheckConfig(
+    problem_type="BinaryClassification",
+    baseline_dataset=val_preds,
+    dataset_format=DatasetFormat.csv(header=True),
+    inference_attribute="prediction",
+    ground_truth_attribute="Churn",
+    output_s3_uri=mq_s3_reports,
+)
 
 step_mq_baseline = QualityCheckStep(
     name="ModelQualityBaseline",
     check_job_config=check_job_cfg,
-    quality_check_config=mq_cfg,
+    quality_check_config=mq_cfg_basline,
     skip_check=True,
     register_new_baseline=True,
 )
@@ -280,11 +293,11 @@ step_mq_baseline = QualityCheckStep(
 step_mq_check = QualityCheckStep(
     name="ModelQualityCheck",
     check_job_config=check_job_cfg,
-    quality_check_config=mq_cfg,
+    quality_check_config=mq_cfg_reports,
     skip_check=False,
     register_new_baseline=False,
-    supplied_baseline_statistics=mq_stat,
-    supplied_baseline_constraints=mq_con,
+    supplied_baseline_statistics=step_mq_baseline.properties.CalculatedBaselineStatistics,
+    supplied_baseline_constraints=step_mq_baseline.properties.CalculatedBaselineConstraints,
 )
 
 deploy_model = Model(
@@ -342,9 +355,9 @@ if __name__ == "__main__":
 
     execution = pipeline.start(
         parameters={
-            "Env": "dev",
+            "Env": "staging",
             "Bucket": "djenk-churn",
-            "RawInputS3Uri": "s3://djenk-churn/dev/raw/",
+            "RawInputS3Uri": "s3://djenk-churn/staging/raw/",
         }
     )
 

@@ -26,34 +26,15 @@ def main():
     booster = xgb.Booster()
     booster.load_model(model_file)
 
-    test_path = Path(args.data_dir) / 'test.csv'
-    df = pd.read_csv(test_path)
-    y = df['Churn'].values
-    X = df.drop(columns=['Churn']).values
-
-    dtest = xgb.DMatrix(X)
-
-    prob = booster.predict(dtest)
-    preds = (prob >= 0.5).astype(int)
-
     val_path = Path(args.data_dir) / 'val.csv'
-    df_val = pd.read_csv(val_path)
-    X_val = df_val.drop(columns=['Churn']).values
+    df = pd.read_csv(val_path)
+    X = df.drop(columns=['Churn']).values
+    y = df['Churn'].values
+    
+    dval = xgb.DMatrix(X)
 
-    dval = xgb.DMatrix(X_val)
-
-    prob_val = booster.predict(dval)
-    preds_val = (prob_val >= 0.5).astype(int)
-
-    df_val['prediction'] = preds_val
-    val_preds_csv = df_val.to_csv(index=False).encode('utf-8')
-
-    s3 = boto3.client("s3")
-
-    bucket = 'djenk-churn'
-    key = f'{env}/features/val_preds.csv'
-
-    s3.put_object(Bucket=bucket, Key=key, Body=val_preds_csv, ContentType="text/csv")
+    prob = booster.predict(dval)
+    preds = (prob >= 0.5).astype(int)
 
     metrics = {
         "roc_auc": float(roc_auc_score(y, prob)),
@@ -69,6 +50,9 @@ def main():
     out = Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / 'model_metrics.json').write_text(json.dumps(metrics, indent=2))
+    pd.DataFrame(
+        {"prediction": preds, "Churn": y}    
+    ).to_csv(out / 'val_preds.csv', index=False)
 
 
 def get_args():
