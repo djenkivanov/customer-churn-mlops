@@ -50,6 +50,7 @@ After validation passes, data gets cleaned:
 
 * AWS SageMaker; Pipelines, Processing, Training, Model Registry, Endpoints
 * AWS Lambda; Pipeline trigger, deploy endpoint
+* AWS EventBridge; S3 upload trigger
 * S3; Storage of raw data, split features, model artifacts, metrics...
 * GitHub Actions; CI linting with Black and Ruff
 * XGBoost
