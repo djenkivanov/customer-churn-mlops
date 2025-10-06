@@ -1,5 +1,7 @@
 # Churn Prediction SageMaker MLOps
 
+### [Demo video for this project!](https://youtu.be/9OgNwBwKLEs)
+
 AWS SageMaker MLOps pipeline that automatically triggers on dataset upload to S3 data directory bucket `/dev/raw`.
 The pipeline process is fully automated, from the first step, ingesting the data all the way to the last step, deploying the model with an endpoint.
 
