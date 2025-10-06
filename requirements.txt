@@ -1,0 +1,7 @@
+pandas
+sagemaker
+pyarrow
+fastparquet
+scikit-learn
+ruff
+black
